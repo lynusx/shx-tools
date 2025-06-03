@@ -65,10 +65,14 @@ function Home() {
       setFiles([])
       setScanError(null)
 
-      const rootDirHandle = await showDirectoryPicker({ startIn: 'desktop' })
+      const rootDirHandle = await showDirectoryPicker({
+        startIn: 'desktop',
+      }).catch(() => {
+        throw new Error('请选择有效目录')
+      })
 
       if (rootDirHandle.name !== 'DC') {
-        throw new Error('请选择DC目录')
+        throw new Error('请选择名为 DC 的目录')
       }
 
       setScanningState(true)
@@ -97,14 +101,8 @@ function Home() {
 
       showToast('扫描完成', `共找到 ${out.length} 张图片`, 'success')
     } catch (error) {
-      if (error.name === 'AbortError') {
-        setScanError('用户取消选择')
-        showToast('扫描失败', '用户取消选择', 'error')
-      } else {
-        setScanError(error.message)
-        showToast('扫描失败', error.message, 'error')
-      }
-
+      setScanError(error.message)
+      showToast('扫描失败', error.message, 'error')
       console.error('Scanning error:', error)
     } finally {
       setScanningState(false)
