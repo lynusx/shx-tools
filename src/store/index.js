@@ -9,6 +9,9 @@ const useStore = create((set) => ({
   isScanning: false,
   scanError: null,
 
+  // Plant
+  plant: 'A',
+
   // Copy state
   copiedCount: 0,
   isCopying: false,
@@ -16,7 +19,7 @@ const useStore = create((set) => ({
 
   // Query parameters
   queryParams: {
-    dirs: ['A01-A', 'A01-B'],
+    dirs: [],
     date: shiftInfo[0],
     shift: shiftInfo[1],
     times: shiftInfo[2],
@@ -25,6 +28,7 @@ const useStore = create((set) => ({
 
   // Actions
   setFiles: (files) => set({ files }),
+  setPlant: (plant) => set({ plant }),
   setScanningState: (isScanning) => set({ isScanning }),
   setScanError: (error) => set({ scanError: error }),
   setCopiedCount: (count) => set({ copiedCount: count }),
