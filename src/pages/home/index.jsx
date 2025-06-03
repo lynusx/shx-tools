@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { motion } from 'framer-motion';
 import useStore from '../../store';
 import {
   Container,
@@ -11,11 +10,17 @@ import {
   Card,
   Heading,
   Progress,
+  CheckboxGroup,
+  DataList,
+  Badge,
+  Callout,
+  Spinner,
 } from '@radix-ui/themes';
 import {
   traverse,
   createValidators,
   copyFileToDirectory,
+  writePathsToFile,
 } from '../../utils/common';
 import { Toast } from '../../components/Toast';
 import './index.css';
@@ -24,6 +29,7 @@ function Home() {
   const {
     files,
     plant,
+    types,
     isScanning,
     scanError,
     copiedCount,
@@ -32,6 +38,7 @@ function Home() {
     queryParams,
     setFiles,
     setPlant,
+    setTypes,
     setScanningState,
     setScanError,
     setCopiedCount,
@@ -45,12 +52,25 @@ function Home() {
     setToast({ open: true, title, description, type });
   };
 
+  const _types = types.flatMap((item) => {
+    if (item === '脏污') {
+      return ['NG_脏污_B', 'NG_脏污_C'];
+    } else if (item === '划伤') {
+      return ['NG_划伤_B', 'NG_划伤_C'];
+    }
+  });
+
   const handleSourceClick = useCallback(async () => {
     try {
       setFiles([]);
       setScanError(null);
 
       const rootDirHandle = await showDirectoryPicker({ startIn: 'desktop' });
+
+      if (rootDirHandle.name !== 'DC') {
+        throw new Error('请选择DC目录');
+      }
+
       setScanningState(true);
       showToast('扫描开始', '正在扫描文件...', 'info');
 
@@ -68,21 +88,28 @@ function Home() {
         queryParams.date,
         queryParams.shift,
         queryParams.times,
-        queryParams.types
+        _types
       );
 
       const out = [];
       await traverse(rootDirHandle, 0, validators, '', out);
       setFiles(out);
+
       showToast('扫描完成', `共找到 ${out.length} 张图片`, 'success');
     } catch (error) {
-      setScanError(error.message);
-      showToast('扫描失败', error.message, 'error');
+      if (error.name === 'AbortError') {
+        setScanError('用户取消选择');
+        showToast('扫描失败', '用户取消选择', 'error');
+      } else {
+        setScanError(error.message);
+        showToast('扫描失败', error.message, 'error');
+      }
+
       console.error('Scanning error:', error);
     } finally {
       setScanningState(false);
     }
-  }, [queryParams, plant, setFiles, setScanningState, setScanError]);
+  }, [queryParams, plant, types, setFiles, setScanningState, setScanError]);
 
   const handleTargetClick = useCallback(async () => {
     if (!files.length) return;
@@ -108,6 +135,13 @@ function Home() {
 
       setCopyingState(true);
 
+      // Write paths to pictures.txt
+      await writePathsToFile(
+        targetDirHandle,
+        files.map((file) => file.path),
+        'source.txt'
+      );
+
       for (let i = 0; i < files.length; i++) {
         await copyFileToDirectory(files[i].handle, targetDirHandle);
         setCopiedCount(i + 1);
@@ -126,21 +160,114 @@ function Home() {
   return (
     <Container size="2">
       <Card size="4" style={{ marginTop: '2rem' }}>
-        <Heading size="6" align="center" mb="6">
+        <Heading size="6" align="center" mb="6" color="blue">
           图片拷贝
         </Heading>
 
         <Box mb="6">
           <Flex align="center" gap="4">
-            <Text weight="bold">厂区选择</Text>
+            <Text size="3" weight="bold" color="blue">
+              厂区选择
+            </Text>
             <RadioGroup.Root defaultValue={plant} onValueChange={setPlant}>
               <Flex gap="2">
-                <RadioGroup.Item value="A">东区</RadioGroup.Item>
-                <RadioGroup.Item value="B">西区</RadioGroup.Item>
+                <RadioGroup.Item value="A">
+                  <Text size="2">东区</Text>
+                </RadioGroup.Item>
+                <RadioGroup.Item value="B">
+                  <Text size="2">西区</Text>
+                </RadioGroup.Item>
               </Flex>
             </RadioGroup.Root>
           </Flex>
         </Box>
+
+        <Box mb="6">
+          <Flex align="center" gap="4">
+            <Text size="3" weight="bold" color="blue">
+              类型选择
+            </Text>
+            <CheckboxGroup.Root
+              defaultValue={types}
+              name="types"
+              onValueChange={setTypes}
+            >
+              <Flex gap="2">
+                <CheckboxGroup.Item value="脏污" disabled>
+                  <Text size="2">脏污</Text>
+                </CheckboxGroup.Item>
+                <CheckboxGroup.Item value="划伤">
+                  <Text size="2">划伤</Text>
+                </CheckboxGroup.Item>
+              </Flex>
+            </CheckboxGroup.Root>
+          </Flex>
+        </Box>
+
+        <Card mb="6">
+          <Callout.Root size="1" mb="4">
+            <Callout.Text>本次扫描的文件范围</Callout.Text>
+          </Callout.Root>
+
+          <DataList.Root>
+            <DataList.Item align="center">
+              <DataList.Label minWidth="88px">厂区</DataList.Label>
+              <DataList.Value>
+                <Badge color="jade" variant="soft" radius="full" mr="2">
+                  {plant === 'A' ? '东区' : '西区'}
+                </Badge>
+              </DataList.Value>
+            </DataList.Item>
+            <DataList.Item align="center">
+              <DataList.Label minWidth="88px">日期</DataList.Label>
+              <DataList.Value>
+                <Badge color="jade" variant="soft" radius="full" mr="2">
+                  {queryParams.date}
+                </Badge>
+              </DataList.Value>
+            </DataList.Item>
+            <DataList.Item align="center">
+              <DataList.Label minWidth="88px">班次</DataList.Label>
+              <DataList.Value>
+                <Badge color="jade" variant="soft" radius="full" mr="2">
+                  {queryParams.shift}
+                </Badge>
+              </DataList.Value>
+            </DataList.Item>
+            <DataList.Item align="center">
+              <DataList.Label minWidth="88px">时段</DataList.Label>
+              <DataList.Value>
+                {queryParams.times.map((item) => (
+                  <Badge
+                    color="jade"
+                    variant="soft"
+                    radius="full"
+                    key={item}
+                    mr="2"
+                  >
+                    {item}
+                  </Badge>
+                ))}
+              </DataList.Value>
+            </DataList.Item>
+            <DataList.Item align="center">
+              <DataList.Label minWidth="88px">类型</DataList.Label>
+              <DataList.Value>
+                {_types.map((item) => (
+                  <Badge
+                    color="jade"
+                    variant="soft"
+                    radius="full"
+                    key={item}
+                    mr="2"
+                  >
+                    {item}
+                  </Badge>
+                ))}
+              </DataList.Value>
+            </DataList.Item>
+          </DataList.Root>
+        </Card>
 
         <Flex direction="column" gap="6">
           <Box>
@@ -152,7 +279,13 @@ function Home() {
               disabled={isScanning || isCopying}
               style={{ width: '100%' }}
             >
-              {isScanning ? '扫描中...' : '选择源文件根目录'}
+              {isScanning ? (
+                <>
+                  <Spinner /> 扫描中
+                </>
+              ) : (
+                <Text>选择DC目录</Text>
+              )}
             </Button>
             {scanError && (
               <Text color="red" size="2" mt="2">
@@ -173,7 +306,13 @@ function Home() {
               disabled={!files.length || isScanning || isCopying}
               style={{ width: '100%' }}
             >
-              {isCopying ? '复制中...' : '选择目标目录'}
+              {isCopying ? (
+                <>
+                  <Spinner /> 复制中
+                </>
+              ) : (
+                <Text>选择目标目录</Text>
+              )}
             </Button>
             {copyError && (
               <Text color="red" size="2" mt="2">

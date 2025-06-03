@@ -9,8 +9,11 @@ const useStore = create((set) => ({
   isScanning: false,
   scanError: null,
 
-  // Plant
+  // 厂区
   plant: 'A',
+
+  // 污染类型
+  types: ['脏污', '划伤'],
 
   // Copy state
   copiedCount: 0,
@@ -23,12 +26,13 @@ const useStore = create((set) => ({
     date: shiftInfo[0],
     shift: shiftInfo[1],
     times: shiftInfo[2],
-    types: ['NG_脏污_B', 'NG_脏污_C', 'NG_划伤_C', 'NG_划伤_C'],
+    // types: ['NG_脏污_B', 'NG_脏污_C', 'NG_划伤_C', 'NG_划伤_C'],
   },
 
   // Actions
   setFiles: (files) => set({ files }),
   setPlant: (plant) => set({ plant }),
+  setTypes: (types) => set({ types }),
   setScanningState: (isScanning) => set({ isScanning }),
   setScanError: (error) => set({ scanError: error }),
   setCopiedCount: (count) => set({ copiedCount: count }),
