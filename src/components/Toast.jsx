@@ -1,7 +1,7 @@
-import * as RadixToast from '@radix-ui/react-toast';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
-import { Card, Text, Flex, IconButton } from '@radix-ui/themes';
+import * as RadixToast from '@radix-ui/react-toast'
+import { motion, AnimatePresence } from 'framer-motion'
+import { clsx } from 'clsx'
+import { Card, Text, Flex, IconButton } from '@radix-ui/themes'
 
 export function Toast({ open, setOpen, title, description, type = 'info' }) {
   return (
@@ -42,5 +42,5 @@ export function Toast({ open, setOpen, title, description, type = 'info' }) {
       </AnimatePresence>
       <RadixToast.Viewport />
     </RadixToast.Provider>
-  );
+  )
 }

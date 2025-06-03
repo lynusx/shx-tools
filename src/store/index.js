@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { getShiftInfo } from '../utils/common';
+import { create } from 'zustand'
+import { getShiftInfo } from '../utils/common'
 
-const shiftInfo = getShiftInfo(new Date());
+const shiftInfo = getShiftInfo(new Date())
 
 const useStore = create((set) => ({
   // File scanning state
@@ -42,6 +42,6 @@ const useStore = create((set) => ({
     set((state) => ({
       queryParams: { ...state.queryParams, ...params },
     })),
-}));
+}))
 
-export default useStore;
+export default useStore
