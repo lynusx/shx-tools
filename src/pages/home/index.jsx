@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import useStore from '../../store'
 import {
   Container,
@@ -24,6 +24,7 @@ import {
 } from '../../utils/common'
 import { Toast } from '../../components/Toast'
 import './index.css'
+import { useToast } from '../../hooks/useToast'
 
 function Home() {
   const {
@@ -46,11 +47,7 @@ function Home() {
     setCopyError,
   } = useStore()
 
-  const [toast, setToast] = useState({ open: false })
-
-  const showToast = (title, description, type) => {
-    setToast({ open: true, title, description, type })
-  }
+  const { toast, showToast, hideToast } = useToast()
 
   const _types = types.flatMap((item) => {
     if (item === '脏污') {
@@ -342,7 +339,7 @@ function Home() {
 
       <Toast
         open={toast.open}
-        setOpen={(open) => setToast({ ...toast, open })}
+        setOpen={hideToast}
         title={toast.title}
         description={toast.description}
         type={toast.type}

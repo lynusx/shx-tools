@@ -1,9 +1,24 @@
 import * as RadixToast from '@radix-ui/react-toast'
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { Card, Text, Flex, IconButton } from '@radix-ui/themes'
 
+const textColor = {
+  info: {
+    color: 'blue',
+  },
+  success: {
+    color: 'jade',
+  },
+  error: {
+    color: 'red',
+  },
+}
+
 export function Toast({ open, setOpen, title, description, type = 'info' }) {
+  const color = textColor[type]?.color
+
   return (
     <RadixToast.Provider swipeDirection="right">
       <AnimatePresence>
@@ -21,14 +36,14 @@ export function Toast({ open, setOpen, title, description, type = 'info' }) {
             >
               <Card size="2" style={{ minWidth: '300px' }}>
                 <Flex justify="between" gap="3">
-                  <div>
-                    <Text as="div" size="2" weight="bold" mb="1">
+                  <Flex gap="2" align="start" direction="column">
+                    <Text as="div" size="2" weight="bold" mb="1" color={color}>
                       {title}
                     </Text>
-                    <Text as="div" size="2" color="gray">
+                    <Text as="div" size="2" color={color}>
                       {description}
                     </Text>
-                  </div>
+                  </Flex>
                   <RadixToast.Close asChild>
                     <IconButton size="1" variant="ghost" color="gray">
                       ✕
