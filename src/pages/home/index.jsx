@@ -2,6 +2,17 @@ import { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import useStore from '../../store';
 import {
+  Container,
+  Box,
+  Button,
+  Text,
+  RadioGroup,
+  Flex,
+  Card,
+  Heading,
+  Progress,
+} from '@radix-ui/themes';
+import {
   traverse,
   createValidators,
   copyFileToDirectory,
@@ -12,6 +23,7 @@ import './index.css';
 function Home() {
   const {
     files,
+    plant,
     isScanning,
     scanError,
     copiedCount,
@@ -19,6 +31,7 @@ function Home() {
     copyError,
     queryParams,
     setFiles,
+    setPlant,
     setScanningState,
     setScanError,
     setCopiedCount,
@@ -41,10 +54,11 @@ function Home() {
       setScanningState(true);
       showToast('扫描开始', '正在扫描文件...', 'info');
 
-      console.log(queryParams);
       const dirs = [];
       for await (const entry of rootDirHandle.values()) {
-        if (entry.kind === 'directory' && /^A\d+/.test(entry.name)) {
+        const regStr = new RegExp(`^${plant}\\d+`);
+
+        if (entry.kind === 'directory' && regStr.test(entry.name)) {
           dirs.push(entry.name);
         }
       }
@@ -68,7 +82,7 @@ function Home() {
     } finally {
       setScanningState(false);
     }
-  }, [queryParams, setFiles, setScanningState, setScanError]);
+  }, [queryParams, plant, setFiles, setScanningState, setScanError]);
 
   const handleTargetClick = useCallback(async () => {
     if (!files.length) return;
@@ -110,150 +124,84 @@ function Home() {
   }, [files, setCopyingState, setCopyError, setCopiedCount]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8"
-      >
-        <h1 className="text-3xl font-bold mb-8 text-gray-800 text-center">
+    <Container size="2">
+      <Card size="4" style={{ marginTop: '2rem' }}>
+        <Heading size="6" align="center" mb="6">
           图片拷贝
-        </h1>
+        </Heading>
 
-        <div className="space-y-8">
-          <motion.div
-            className="space-y-4"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <button
+        <Box mb="6">
+          <Flex align="center" gap="4">
+            <Text weight="bold">厂区选择</Text>
+            <RadioGroup.Root defaultValue={plant} onValueChange={setPlant}>
+              <Flex gap="2">
+                <RadioGroup.Item value="A">东区</RadioGroup.Item>
+                <RadioGroup.Item value="B">西区</RadioGroup.Item>
+              </Flex>
+            </RadioGroup.Root>
+          </Flex>
+        </Box>
+
+        <Flex direction="column" gap="6">
+          <Box>
+            <Button
+              size="3"
+              variant="soft"
+              color="blue"
               onClick={handleSourceClick}
               disabled={isScanning || isCopying}
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-lg font-medium shadow-md hover:from-blue-600 hover:to-blue-700 transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{ width: '100%' }}
             >
-              {isScanning ? (
-                <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  扫描中...
-                </span>
-              ) : (
-                '选择源文件根目录'
-              )}
-            </button>
+              {isScanning ? '扫描中...' : '选择源文件根目录'}
+            </Button>
             {scanError && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-red-500 text-sm"
-              >
+              <Text color="red" size="2" mt="2">
                 {scanError}
-              </motion.p>
+              </Text>
             )}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-gray-600 text-center"
-            >
+            <Text align="center" color="gray" size="2" mt="2">
               共找到：{files.length} 张图片
-            </motion.p>
-          </motion.div>
+            </Text>
+          </Box>
 
-          <motion.div
-            className="space-y-4"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <button
+          <Box>
+            <Button
+              size="3"
+              variant="soft"
+              color="green"
               onClick={handleTargetClick}
               disabled={!files.length || isScanning || isCopying}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-lg font-medium shadow-md hover:from-green-600 hover:to-green-700 transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{ width: '100%' }}
             >
-              {isCopying ? (
-                <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  复制中...
-                </span>
-              ) : (
-                '选择目标目录'
-              )}
-            </button>
+              {isCopying ? '复制中...' : '选择目标目录'}
+            </Button>
             {copyError && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-red-500 text-sm"
-              >
+              <Text color="red" size="2" mt="2">
                 {copyError}
-              </motion.p>
+              </Text>
             )}
             {copiedCount > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="relative pt-1"
-              >
-                <div className="flex mb-2 items-center justify-between">
-                  <div className="text-xs font-semibold inline-block text-green-600">
+              <Box mt="4">
+                <Flex justify="between" mb="2">
+                  <Text size="2" color="gray">
+                    进度
+                  </Text>
+                  <Text size="2" color="gray">
                     {Math.round((copiedCount / files.length) * 100)}%
-                  </div>
-                </div>
-                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-100">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{
-                      width: `${(copiedCount / files.length) * 100}%`,
-                    }}
-                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"
-                  />
-                </div>
-                <p className="text-gray-600 text-center">
+                  </Text>
+                </Flex>
+                <Progress
+                  value={(copiedCount / files.length) * 100}
+                  color="green"
+                />
+                <Text align="center" color="gray" size="2" mt="2">
                   已复制 {copiedCount} / {files.length} 张图片
-                </p>
-              </motion.div>
+                </Text>
+              </Box>
             )}
-          </motion.div>
-        </div>
-      </motion.div>
+          </Box>
+        </Flex>
+      </Card>
 
       <Toast
         open={toast.open}
@@ -262,7 +210,7 @@ function Home() {
         description={toast.description}
         type={toast.type}
       />
-    </div>
+    </Container>
   );
 }
 
