@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import useStore from '../../store';
+import { useCallback } from 'react'
+import useStore from '../../store'
 import {
   Container,
   Box,
@@ -15,15 +15,16 @@ import {
   Badge,
   Callout,
   Spinner,
-} from '@radix-ui/themes';
+} from '@radix-ui/themes'
 import {
   traverse,
   createValidators,
-  copyFileToDirectory,
   writePathsToFile,
-} from '../../utils/common';
-import { Toast } from '../../components/Toast';
-import './index.css';
+  copyFilesInBatches,
+} from '../../utils/common'
+import { Toast } from '../../components/Toast'
+import './index.css'
+import { useToast } from '../../hooks/useToast'
 
 function Home() {
   const {
@@ -44,42 +45,42 @@ function Home() {
     setCopiedCount,
     setCopyingState,
     setCopyError,
-  } = useStore();
+  } = useStore()
 
-  const [toast, setToast] = useState({ open: false });
-
-  const showToast = (title, description, type) => {
-    setToast({ open: true, title, description, type });
-  };
+  const { toast, showToast, hideToast } = useToast()
 
   const _types = types.flatMap((item) => {
     if (item === '脏污') {
-      return ['NG_脏污_B', 'NG_脏污_C'];
+      return ['NG_脏污_B', 'NG_脏污_C']
     } else if (item === '划伤') {
-      return ['NG_划伤_B', 'NG_划伤_C'];
+      return ['NG_划伤_B', 'NG_划伤_C']
     }
-  });
+  })
 
   const handleSourceClick = useCallback(async () => {
     try {
-      setFiles([]);
-      setScanError(null);
+      setFiles([])
+      setScanError(null)
 
-      const rootDirHandle = await showDirectoryPicker({ startIn: 'desktop' });
+      const rootDirHandle = await showDirectoryPicker({
+        startIn: 'desktop',
+      }).catch(() => {
+        throw new Error('请选择有效目录')
+      })
 
       if (rootDirHandle.name !== 'DC') {
-        throw new Error('请选择DC目录');
+        throw new Error('请选择名为 DC 的目录')
       }
 
-      setScanningState(true);
-      showToast('扫描开始', '正在扫描文件...', 'info');
+      setScanningState(true)
+      showToast('扫描开始', '正在扫描文件...', 'info')
 
-      const dirs = [];
+      const dirs = []
       for await (const entry of rootDirHandle.values()) {
-        const regStr = new RegExp(`^${plant}\\d+`);
+        const regStr = new RegExp(`^${plant}\\d+`)
 
         if (entry.kind === 'directory' && regStr.test(entry.name)) {
-          dirs.push(entry.name);
+          dirs.push(entry.name)
         }
       }
 
@@ -88,38 +89,45 @@ function Home() {
         queryParams.date,
         queryParams.shift,
         queryParams.times,
-        _types
-      );
+        _types,
+      )
 
-      const out = [];
-      await traverse(rootDirHandle, 0, validators, '', out);
-      setFiles(out);
+      const out = []
+      await traverse(rootDirHandle, 0, validators, '', out)
+      setFiles(out)
 
-      showToast('扫描完成', `共找到 ${out.length} 张图片`, 'success');
+      showToast('扫描完成', `共找到 ${out.length} 张图片`, 'success')
     } catch (error) {
-      if (error.name === 'AbortError') {
-        setScanError('用户取消选择');
-        showToast('扫描失败', '用户取消选择', 'error');
-      } else {
-        setScanError(error.message);
-        showToast('扫描失败', error.message, 'error');
-      }
-
-      console.error('Scanning error:', error);
+      setScanError(error.message)
+      showToast('扫描失败', error.message, 'error')
+      console.error('Scanning error:', error)
     } finally {
-      setScanningState(false);
+      setScanningState(false)
     }
-  }, [queryParams, plant, types, setFiles, setScanningState, setScanError]);
+  }, [
+    setFiles,
+    setScanError,
+    setScanningState,
+    showToast,
+    queryParams.date,
+    queryParams.shift,
+    queryParams.times,
+    _types,
+    plant,
+  ])
 
   const handleTargetClick = useCallback(async () => {
-    if (!files.length) return;
+    if (!files.length) return
 
     try {
-      setCopyError(null);
-      setCopiedCount(0);
+      setCopyError(null)
+      setCopiedCount(0)
 
-      const targetDirHandle = await showDirectoryPicker({ startIn: 'desktop' });
-      showToast('复制开始', '正在复制文件...', 'info');
+      const targetDirHandle = await showDirectoryPicker({
+        startIn: 'desktop',
+      }).catch(() => {
+        throw new Error('请选择有效的目录')
+      })
 
       if (
         (await targetDirHandle.queryPermission({ mode: 'readwrite' })) !==
@@ -129,33 +137,39 @@ function Home() {
           (await targetDirHandle.requestPermission({ mode: 'readwrite' })) !==
           'granted'
         ) {
-          throw new Error('写入目标目录权限被拒绝');
+          throw new Error('写入目标目录权限被拒绝')
         }
       }
 
-      setCopyingState(true);
+      showToast('复制开始', '正在复制文件...', 'info')
 
-      // Write paths to pictures.txt
+      setCopyingState(true)
+
+      // Write paths to source.txt
       await writePathsToFile(
         targetDirHandle,
         files.map((file) => file.path),
-        'source.txt'
-      );
+        'source.txt',
+      )
 
-      for (let i = 0; i < files.length; i++) {
-        await copyFileToDirectory(files[i].handle, targetDirHandle);
-        setCopiedCount(i + 1);
-      }
+      // for (let i = 0; i < files.length; i++) {
+      //   await copyFileToDirectory(files[i].handle, targetDirHandle)
+      //   setCopiedCount(i + 1)
+      // }
+      // 使用批量复制功能
+      await copyFilesInBatches(files, targetDirHandle, 10, (progress) => {
+        setCopiedCount(progress)
+      })
 
-      showToast('复制完成', `已复制 ${files.length} 张图片`, 'success');
+      showToast('复制完成', `已复制 ${files.length} 张图片`, 'success')
     } catch (error) {
-      setCopyError(error.message);
-      showToast('复制失败', error.message, 'error');
-      console.error('Copy error:', error);
+      setCopyError(error.message)
+      showToast('复制失败', error.message, 'error')
+      // console.error('Copy error:', error)
     } finally {
-      setCopyingState(false);
+      setCopyingState(false)
     }
-  }, [files, setCopyingState, setCopyError, setCopiedCount]);
+  }, [files, setCopyError, setCopiedCount, showToast, setCopyingState])
 
   return (
     <Container size="2">
@@ -344,13 +358,13 @@ function Home() {
 
       <Toast
         open={toast.open}
-        setOpen={(open) => setToast({ ...toast, open })}
+        setOpen={hideToast}
         title={toast.title}
         description={toast.description}
         type={toast.type}
       />
     </Container>
-  );
+  )
 }
 
-export default Home;
+export default Home
