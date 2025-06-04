@@ -19,8 +19,8 @@ import {
 import {
   traverse,
   createValidators,
-  copyFileToDirectory,
   writePathsToFile,
+  copyFilesInBatches,
 } from '../../utils/common'
 import { Toast } from '../../components/Toast'
 import './index.css'
@@ -104,7 +104,17 @@ function Home() {
     } finally {
       setScanningState(false)
     }
-  }, [queryParams, plant, types, setFiles, setScanningState, setScanError])
+  }, [
+    setFiles,
+    setScanError,
+    setScanningState,
+    showToast,
+    queryParams.date,
+    queryParams.shift,
+    queryParams.times,
+    _types,
+    plant,
+  ])
 
   const handleTargetClick = useCallback(async () => {
     if (!files.length) return
@@ -113,8 +123,11 @@ function Home() {
       setCopyError(null)
       setCopiedCount(0)
 
-      const targetDirHandle = await showDirectoryPicker({ startIn: 'desktop' })
-      showToast('复制开始', '正在复制文件...', 'info')
+      const targetDirHandle = await showDirectoryPicker({
+        startIn: 'desktop',
+      }).catch(() => {
+        throw new Error('请选择有效的目录')
+      })
 
       if (
         (await targetDirHandle.queryPermission({ mode: 'readwrite' })) !==
@@ -128,29 +141,35 @@ function Home() {
         }
       }
 
+      showToast('复制开始', '正在复制文件...', 'info')
+
       setCopyingState(true)
 
-      // Write paths to pictures.txt
+      // Write paths to source.txt
       await writePathsToFile(
         targetDirHandle,
         files.map((file) => file.path),
         'source.txt',
       )
 
-      for (let i = 0; i < files.length; i++) {
-        await copyFileToDirectory(files[i].handle, targetDirHandle)
-        setCopiedCount(i + 1)
-      }
+      // for (let i = 0; i < files.length; i++) {
+      //   await copyFileToDirectory(files[i].handle, targetDirHandle)
+      //   setCopiedCount(i + 1)
+      // }
+      // 使用批量复制功能
+      await copyFilesInBatches(files, targetDirHandle, 10, (progress) => {
+        setCopiedCount(progress)
+      })
 
       showToast('复制完成', `已复制 ${files.length} 张图片`, 'success')
     } catch (error) {
       setCopyError(error.message)
       showToast('复制失败', error.message, 'error')
-      console.error('Copy error:', error)
+      // console.error('Copy error:', error)
     } finally {
       setCopyingState(false)
     }
-  }, [files, setCopyingState, setCopyError, setCopiedCount])
+  }, [files, setCopyError, setCopiedCount, showToast, setCopyingState])
 
   return (
     <Container size="2">

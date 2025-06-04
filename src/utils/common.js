@@ -62,9 +62,9 @@ export async function writePathsToFile(dirHandle, paths, filename) {
     const content = paths.join('\n')
     await writableStream.write(content)
     await writableStream.close()
-  } catch (error) {
-    // console.error('Error writing pictures.txt:', error);
-    throw new Error('Failed to create pictures.txt file')
+    // eslint-disable-next-line no-unused-vars
+  } catch (err) {
+    throw new Error(`文件 ${filename} 创建失败`)
   }
 }
 
@@ -98,6 +98,30 @@ export async function copyFileToDirectory(
   } catch (err) {
     // throw new Error(`复制失败：${err.message}`);
     console.log(err)
+  }
+}
+
+// 批量文件复制
+export const copyFilesInBatches = async (
+  files,
+  targetDirHandle,
+  batchSize = 10,
+  onProgress,
+) => {
+  const total = files.length
+  const batches = Math.ceil(total / batchSize)
+
+  for (let i = 0; i < batches; i++) {
+    const start = i * batchSize
+    const end = Math.min(start + batchSize, total)
+    const batch = files.slice(start, end)
+
+    await Promise.all(
+      batch.map(async (file) => {
+        await copyFileToDirectory(file.handle, targetDirHandle)
+        onProgress && onProgress(start + batch.indexOf(file) + 1)
+      }),
+    )
   }
 }
 
